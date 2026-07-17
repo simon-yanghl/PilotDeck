@@ -1,0 +1,123 @@
+# 可在官方现有三级 tier 能力上试用的配置片段。
+# 该文件不包含 domain 双路由、视觉预处理和治理流水线；这些需要 custom 版代码。
+# 模型参数中的占位符必须在加载前替换为正整数。
+
+schemaVersion: 1
+
+agent:
+  model: deepseek/deepseek-v4-pro
+  params: {}
+  subagents:
+    default: inherit
+    params: {}
+  # 全局仅作模型未配置时的兜底。
+  maxContextTokens: 400000
+  maxOutputTokens: <FILL_GLOBAL_OUTPUT_FALLBACK>
+
+model:
+  providers:
+    deepseek:
+      protocol: openai
+      url: https://api.deepseek.com
+      apiKey: ${DEEPSEEK_API_KEY}
+      timeoutMs: 120000
+      models:
+        deepseek-v4-pro:
+          capabilities:
+            maxContextTokens: <FILL_DEEPSEEK_PRO_CONTEXT_BUDGET>
+            maxOutputTokens: <FILL_DEEPSEEK_PRO_OUTPUT_LIMIT>
+          multimodal:
+            input: [text]
+        deepseek-v4-flash:
+          capabilities:
+            maxContextTokens: <FILL_DEEPSEEK_FLASH_CONTEXT_BUDGET>
+            maxOutputTokens: <FILL_DEEPSEEK_FLASH_OUTPUT_LIMIT>
+          multimodal:
+            input: [text]
+
+    dashscope:
+      protocol: openai
+      url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      apiKey: ${DASHSCOPE_API_KEY}
+      timeoutMs: 120000
+      models:
+        qwen3.7-plus:
+          capabilities:
+            maxContextTokens: <FILL_QWEN_PLUS_CONTEXT_BUDGET>
+            maxOutputTokens: <FILL_QWEN_PLUS_OUTPUT_LIMIT>
+          multimodal:
+            input: [text, image]
+
+    volc_ark:
+      protocol: openai
+      url: https://ark.cn-beijing.volces.com/api/v3
+      apiKey: ${VOLC_ARK_API_KEY}
+      models:
+        doubao-seed-2-1-pro-260628: {}
+        doubao-seed-2-1-turbo-260628: {}
+        doubao-seed-2-0-lite-260428: {}
+
+router:
+  enabled: true
+  scenarios:
+    default: deepseek/deepseek-v4-pro
+
+  zeroUsageRetry:
+    enabled: true
+    maxAttempts: 2
+
+  tokenSaver:
+    enabled: true
+    judge: deepseek/deepseek-v4-flash
+    defaultTier: standard
+    judgeTimeoutMs: 15000
+    subagent:
+      policy: judge
+    cacheAwareSwitching:
+      enabled: true
+      minSavingsRatio: 0
+
+    tiers:
+      standard:
+        model: deepseek/deepseek-v4-flash
+        description: >
+          Fast general-purpose processing for tasks that can be completed reliably
+          without advanced reasoning. Use for ordinary questions, explanations,
+          simple coding tasks, small edits, documentation work, and routine operations.
+          Prefer this tier unless stronger capability is clearly required.
+
+      deep:
+        model: deepseek/deepseek-v4-pro
+        description: >
+          Advanced single-agent reasoning for tasks requiring careful analysis and
+          higher reliability. Use for architecture decisions, difficult debugging,
+          multi-step reasoning, complex code changes, technical evaluation, and tasks
+          where mistakes are costly. Do not use when a fast model is sufficient.
+
+      complex:
+        model: deepseek/deepseek-v4-pro
+        description: >
+          Multi-agent orchestration for tasks that benefit from decomposition into
+          independent work streams. Use for large feature development, parallel research,
+          multi-module implementation, or tasks requiring specialized agents. Do not use
+          only because a task is difficult, long, or technical.
+
+    rules:
+      - Prefer standard unless stronger reasoning capability is clearly required.
+      - Use deep when the task requires expert-level reasoning, careful judgment, or high reliability.
+      - Use complex only when the task can be meaningfully divided into independent subtasks.
+      - Do not select complex merely because a task is large or difficult.
+      - Prefer lower-cost models when they can complete the task reliably.
+      - Judge the required capability, not the wording, emotional tone, or length of the request.
+      - Image-bearing requests are handled by the vision preprocessing layer and must not be classified here.
+
+  autoOrchestrate:
+    enabled: true
+    triggerTiers: [complex]
+    slimSystemPrompt: true
+    allowedTools: [agent, read_file, grep, glob, read_skill]
+    # One orchestration layer only; workers must not spawn further agents.
+    subagentMaxTokens: <FILL_SUBAGENT_MAX_TOKENS>
+
+  stats:
+    enabled: true

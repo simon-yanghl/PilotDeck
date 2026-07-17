@@ -1,0 +1,86 @@
+[
+  {
+    "path": "PilotDeck_Custom_Design_Spec_V1.md",
+    "bytes": 2250
+  },
+  {
+    "path": "README.md",
+    "bytes": 2491
+  },
+  {
+    "path": "config/pilotdeck.current.snapshot.redacted.yaml",
+    "bytes": 3370
+  },
+  {
+    "path": "config/pilotdeck.custom.target.yaml",
+    "bytes": 4012
+  },
+  {
+    "path": "config/pilotdeck.stock-compatible.v1.yaml",
+    "bytes": 4310
+  },
+  {
+    "path": "docs/01-architecture.zh-CN.md",
+    "bytes": 1820
+  },
+  {
+    "path": "docs/02-router-and-vision.zh-CN.md",
+    "bytes": 3292
+  },
+  {
+    "path": "docs/03-engineering-governance.zh-CN.md",
+    "bytes": 2799
+  },
+  {
+    "path": "docs/04-workspace-memory-archive.zh-CN.md",
+    "bytes": 1822
+  },
+  {
+    "path": "docs/05-security-and-permissions.zh-CN.md",
+    "bytes": 1550
+  },
+  {
+    "path": "docs/06-observability-and-ui.zh-CN.md",
+    "bytes": 1417
+  },
+  {
+    "path": "docs/07-fork-upgrade-deployment.zh-CN.md",
+    "bytes": 1601
+  },
+  {
+    "path": "implementation/CLAUDE_IMPLEMENTATION_GUIDE.md",
+    "bytes": 3493
+  },
+  {
+    "path": "implementation/acceptance-criteria.zh-CN.md",
+    "bytes": 2123
+  },
+  {
+    "path": "implementation/open-decisions.zh-CN.md",
+    "bytes": 786
+  },
+  {
+    "path": "implementation/phase-plan.zh-CN.md",
+    "bytes": 1957
+  },
+  {
+    "path": "implementation/source-notes.md",
+    "bytes": 1718
+  },
+  {
+    "path": "prompts/global-engineering-policy.en.md",
+    "bytes": 2051
+  },
+  {
+    "path": "prompts/global-engineering-policy.zh-CN.md",
+    "bytes": 1124
+  },
+  {
+    "path": "prompts/router-judge.en.md",
+    "bytes": 2264
+  },
+  {
+    "path": "prompts/router-judge.zh-CN.md",
+    "bytes": 1302
+  }
+]

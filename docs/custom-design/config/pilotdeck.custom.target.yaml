@@ -1,0 +1,158 @@
+# TARGET DESIGN SCHEMA — 需要 PilotDeck custom fork 支持，不能假设官方原版直接可用。
+# 所有 <FILL_...> 必须由用户确认后填写。
+
+schemaVersion: 1
+
+agent:
+  model: deepseek/deepseek-v4-pro
+  maxContextTokens: 400000       # 全局兜底，模型级优先
+  maxOutputTokens: <FILL_GLOBAL_OUTPUT_FALLBACK>
+  subagents:
+    default: inherit
+
+model:
+  providers:
+    deepseek:
+      protocol: openai
+      url: https://api.deepseek.com
+      apiKey: ${DEEPSEEK_API_KEY}
+      timeoutMs: 120000
+      models:
+        deepseek-v4-pro:
+          capabilities:
+            maxContextTokens: <FILL_DEEPSEEK_PRO_CONTEXT_BUDGET>
+            maxOutputTokens: <FILL_DEEPSEEK_PRO_OUTPUT_LIMIT>
+          multimodal:
+            input: [text]
+        deepseek-v4-flash:
+          capabilities:
+            maxContextTokens: <FILL_DEEPSEEK_FLASH_CONTEXT_BUDGET>
+            maxOutputTokens: <FILL_DEEPSEEK_FLASH_OUTPUT_LIMIT>
+          multimodal:
+            input: [text]
+
+    dashscope:
+      protocol: openai
+      url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      apiKey: ${DASHSCOPE_API_KEY}
+      timeoutMs: 120000
+      models:
+        qwen3.7-plus:
+          capabilities:
+            maxContextTokens: <FILL_QWEN_PLUS_CONTEXT_BUDGET>
+            maxOutputTokens: <FILL_QWEN_PLUS_OUTPUT_LIMIT>
+          multimodal:
+            input: [text, image]
+
+    volc_ark:
+      protocol: openai
+      url: https://ark.cn-beijing.volces.com/api/v3
+      apiKey: ${VOLC_ARK_API_KEY}
+      models:
+        doubao-seed-2-1-pro-260628: {}
+        doubao-seed-2-1-turbo-260628: {}
+        doubao-seed-2-0-lite-260428: {}
+
+router:
+  enabled: true
+
+  # Custom: 路由入口先处理图片；DeepSeek 永远不直接接收图片。
+  visionPreprocess:
+    enabled: true
+    model: dashscope/qwen3.7-plus
+    outputSchema: vision-analysis-v1
+    archiveRawResult: true
+    injectMode: structured_context
+    maxResultChars: <FILL_VISION_RESULT_CHAR_LIMIT>
+
+  # Custom: Judge 一次返回领域和等级。
+  classifier:
+    enabled: true
+    model: deepseek/deepseek-v4-flash
+    contextMode: last_user_request_only
+    previousTierHint: true
+    temperature: 0
+    timeoutMs: 15000
+    maxAttempts: 3
+    outputFormat: json
+    allowedDomains: [engineering, general]
+    allowedTiers: [standard, deep, complex]
+
+  domains:
+    engineering:
+      tiers:
+        standard:
+          model: deepseek/deepseek-v4-flash
+        deep:
+          model: deepseek/deepseek-v4-pro
+        complex:
+          model: deepseek/deepseek-v4-pro
+          workflow: engineering-complex-v1
+
+    general:
+      tiers:
+        standard:
+          model: deepseek/deepseek-v4-flash
+        deep:
+          model: deepseek/deepseek-v4-pro
+        complex:
+          model: deepseek/deepseek-v4-pro
+          workflow: general-complex-v1
+
+  fallbackPolicy:
+    invalidOutput:
+      engineeringWorkspace: engineering/deep
+      defaultWorkspace: general/standard
+    invalidTier:
+      engineering: engineering/deep
+      general: general/standard
+    invalidDomain:
+      inferFromWorkspace: true
+    neverFallbackToComplex: true
+
+  escalation:
+    runtimeEscalation: true
+    allowed:
+      - standard->deep
+      - deep->complex
+    directStandardToComplex: false
+
+  orchestration:
+    maxDepth: 1
+    childRouting: judge
+    finalIntegrator: deepseek/deepseek-v4-pro
+
+  manualOverride:
+    enabled: true
+    syntax: <IMPLEMENTATION_DECISION>
+
+  stats:
+    enabled: true
+    retainIndefinitely: true
+
+workspace:
+  autoDetectFromDirectory: true
+  allowManualOverride: true
+  autoCreatePrompt: true
+  precedence: [manual, directory, default]
+
+memory:
+  enabled: true
+  globalNamespace: true
+  workspaceNamespace: true
+  toolResultPolicy:
+    archiveRaw: true
+    storeSummaryInMemory: true
+
+archive:
+  index: sqlite
+  payload: filesystem
+  retainIndefinitely: true
+
+observability:
+  showActiveModel: true
+  showDomain: true
+  showTier: true
+  showResolutionSource: true
+  showReason: true
+  showFallbackWarning: true
